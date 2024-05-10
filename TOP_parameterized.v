@@ -1,18 +1,28 @@
-module TOP #(parameter DATA_WIDTH = 16, WEIGHT_WIDTH = 8, IFM_WIDTH = 8, FIFO_SIZE = 10, INDEX_WIDTH = 4, KERNEL_SIZE = 3)(
+module TOP #(
+  parameter 
+    DATA_WIDTH = 16, 
+    WEIGHT_WIDTH = 8, 
+    IFM_WIDTH = 8, 
+    FIFO_SIZE = 10, 
+    IFM_SIZE = 9, 
+    KERNEL_SIZE = 3, 
+    CI = 3, 
+    CO = 4
+)(
 	input clk1,
 	input clk2,
 	input rst_n,
-	input set_reg,
 	input set_wgt,
 	input set_ifm,
-  input rd_clr,
-  input wr_clr,
-	input [KERNEL_SIZE-1:0] wr_en,
-	input [KERNEL_SIZE-1:0] rd_en,
+  input start_conv,
 	input [IFM_WIDTH-1:0] ifm,
 	input [KERNEL_SIZE*KERNEL_SIZE*WEIGHT_WIDTH-1:0] wgt,
+  output out_valid,
+  output end_conv,
 	output[DATA_WIDTH-1:0] data_output
 	);
+
+  localparam ADD_WIDTH = $clog2(IFM_SIZE-KERNEL_SIZE+1)+1;
 
 	wire [DATA_WIDTH-1:0] psum [KERNEL_SIZE-1:0][KERNEL_SIZE:0];
 	reg  [WEIGHT_WIDTH-1:0] weight [KERNEL_SIZE*KERNEL_SIZE-1:0];
@@ -30,6 +40,35 @@ module TOP #(parameter DATA_WIDTH = 16, WEIGHT_WIDTH = 8, IFM_WIDTH = 8, FIFO_SI
   endgenerate
 
   assign psum[0][0] = 0;
+
+  wire rd_clr;
+  wire wr_clr;
+  wire re_buffer;
+  wire set_reg;
+  wire [DATA_WIDTH-1:0] psum_buffer;
+  wire [KERNEL_SIZE-1:0] wr_en;
+  wire [KERNEL_SIZE-1:0] rd_en;
+  wire [ADD_WIDTH:0] addr_x;
+  wire [ADD_WIDTH:0] addr_y;
+  wire [$clog2(CO)+1:0] addr_c;
+
+  CONTROL #(.KERNEL_SIZE(KERNEL_SIZE), .IFM_SIZE(IFM_SIZE), .CI(CI), .CO(CO)) control (
+     .clk1(clk1)
+    ,.clk2(clk2)
+    ,.rst_n(rst_n)
+    ,.start_conv(start_conv)
+    ,.rd_clr(rd_clr)
+    ,.wr_clr(wr_clr)
+    ,.out_valid(out_valid)
+    ,.set_reg(set_reg)
+    ,.end_conv(end_conv)
+    ,.re_buffer(re_buffer)
+    ,.rd_en(rd_en)
+    ,.wr_en(wr_en)
+    ,.addr_x(addr_x)
+    ,.addr_y(addr_y)
+    ,.addr_c(addr_c)
+  );
 
   genvar arr_i;
   genvar arr_j;
@@ -53,7 +92,7 @@ module TOP #(parameter DATA_WIDTH = 16, WEIGHT_WIDTH = 8, IFM_WIDTH = 8, FIFO_SI
   generate
     for (fifo_i = 0; fifo_i < KERNEL_SIZE-1; fifo_i = fifo_i + 1)
     begin
-      FIFO_ASYNCH #(.DATA_WIDTH(DATA_WIDTH), .FIFO_SIZE(FIFO_SIZE), .ADD_WIDTH(INDEX_WIDTH)) fifo(
+      FIFO_ASYNCH #(.DATA_WIDTH(DATA_WIDTH), .FIFO_SIZE(FIFO_SIZE), .ADD_WIDTH(ADD_WIDTH)) fifo(
 	    	 .clk1  (clk1)
 	    	,.clk2  (clk2)
 	    	,.rd_clr(rd_clr)
@@ -68,7 +107,7 @@ module TOP #(parameter DATA_WIDTH = 16, WEIGHT_WIDTH = 8, IFM_WIDTH = 8, FIFO_SI
     end
   endgenerate
 
-  FIFO_ASYNCH #(.DATA_WIDTH(DATA_WIDTH), .FIFO_SIZE(FIFO_SIZE), .ADD_WIDTH(INDEX_WIDTH)) fifo_end(
+  FIFO_ASYNCH_END #(.DATA_WIDTH(DATA_WIDTH), .FIFO_SIZE(FIFO_SIZE), .ADD_WIDTH(ADD_WIDTH)) fifo_end(
 		 .clk1  (clk1)
 		,.clk2  (clk2)
 		,.rd_clr(rd_clr)
@@ -77,9 +116,22 @@ module TOP #(parameter DATA_WIDTH = 16, WEIGHT_WIDTH = 8, IFM_WIDTH = 8, FIFO_SI
 		,.wr_inc(1'b1)
 		,.wr_en (wr_en[KERNEL_SIZE-1])
 		,.rd_en (rd_en[KERNEL_SIZE-1])
+    ,.re_buffer(re_buffer)
+    ,.psum_buffer(psum_buffer)
 		,.data_in_fifo (psum[KERNEL_SIZE-1][KERNEL_SIZE])
 		,.data_out_fifo(data_output)
 		);
+  
+  BUFFER #(.DATA_WIDTH(DATA_WIDTH), .KERNEL_SIZE(KERNEL_SIZE), .DEPTH_H(IFM_SIZE-KERNEL_SIZE+1), .DEPTH_W(IFM_SIZE-KERNEL_SIZE+1), .CO(CO)) buffer_psum(
+     .clk(clk1)
+    ,.addr_x(addr_x)
+    ,.addr_y(addr_y)
+    ,.addr_c(addr_c)
+    ,.d_in(data_output)
+    ,.d_out(psum_buffer)
+    ,.we(rd_en[KERNEL_SIZE-1])
+    ,.re(re_buffer)
+  );
 
   genvar wgt_i;
   generate
