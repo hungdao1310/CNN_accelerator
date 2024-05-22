@@ -1,49 +1,43 @@
 module TOP #(
   parameter 
-    DATA_WIDTH = 16, 
-    WEIGHT_WIDTH = 8, 
-    IFM_WIDTH = 8, 
-    FIFO_SIZE = 10, 
-    IFM_SIZE = 9, 
-    KERNEL_SIZE = 3, 
+    DATA_WIDTH = 32, 
+    WEIGHT_WIDTH = 16, 
+    IFM_WIDTH = 16,  
+    IFM_SIZE = 28, 
+    KERNEL_SIZE = 5,
+    STRIDE = 3,
+    PAD = 2,
+    FIFO_SIZE = (IFM_SIZE-KERNEL_SIZE+2*PAD)/STRIDE+1,
     CI = 3, 
-    CO = 4
+    CO = 8
 )(
 	input clk1,
 	input clk2,
 	input rst_n,
-	input set_wgt,
-	input set_ifm,
   input start_conv,
 	input [IFM_WIDTH-1:0] ifm,
-	input [KERNEL_SIZE*KERNEL_SIZE*WEIGHT_WIDTH-1:0] wgt,
+	input [WEIGHT_WIDTH-1:0] wgt,
+  output ifm_read,
+  output wgt_read,
   output out_valid,
   output end_conv,
 	output[DATA_WIDTH-1:0] data_output
 	);
 
-  localparam ADD_WIDTH = $clog2(IFM_SIZE-KERNEL_SIZE+1)+1;
+  localparam ADD_WIDTH = $clog2(IFM_SIZE-KERNEL_SIZE+2*PAD+1)+1;
 
-	wire [DATA_WIDTH-1:0] psum [KERNEL_SIZE-1:0][KERNEL_SIZE:0];
 	reg  [WEIGHT_WIDTH-1:0] weight [KERNEL_SIZE*KERNEL_SIZE-1:0];
+	wire [DATA_WIDTH-1:0] psum [KERNEL_SIZE-1:0][KERNEL_SIZE:0];
 	wire [WEIGHT_WIDTH-1:0] wgt_wire [KERNEL_SIZE*KERNEL_SIZE-1:0];
 	wire [IFM_WIDTH-1:0] ifm_wire;
-
-  genvar i;
-  generate 
-    for (i = 0; i < KERNEL_SIZE*KERNEL_SIZE; i = i + 1)
-    begin
-	    always @(*) begin
-        weight[i] = wgt[WEIGHT_WIDTH*(KERNEL_SIZE*KERNEL_SIZE-i)-1:WEIGHT_WIDTH*(KERNEL_SIZE*KERNEL_SIZE-i-1)];
-	    end
-    end
-  endgenerate
+  wire [KERNEL_SIZE*KERNEL_SIZE-1:0] set_wgt;
 
   assign psum[0][0] = 0;
 
   wire rd_clr;
   wire wr_clr;
   wire re_buffer;
+  wire set_ifm;
   wire set_reg;
   wire [DATA_WIDTH-1:0] psum_buffer;
   wire [KERNEL_SIZE-1:0] wr_en;
@@ -52,14 +46,18 @@ module TOP #(
   wire [ADD_WIDTH:0] addr_y;
   wire [$clog2(CO)+1:0] addr_c;
 
-  CONTROL #(.KERNEL_SIZE(KERNEL_SIZE), .IFM_SIZE(IFM_SIZE), .CI(CI), .CO(CO)) control (
+  CONTROL #(.KERNEL_SIZE(KERNEL_SIZE), .IFM_SIZE(IFM_SIZE+2*PAD), .PAD(PAD), .STRIDE(STRIDE), .CI(CI), .CO(CO)) control (
      .clk1(clk1)
     ,.clk2(clk2)
     ,.rst_n(rst_n)
     ,.start_conv(start_conv)
+    ,.ifm_read(ifm_read)
+    ,.wgt_read(wgt_read)
     ,.rd_clr(rd_clr)
     ,.wr_clr(wr_clr)
     ,.out_valid(out_valid)
+    ,.set_ifm(set_ifm)
+    ,.set_wgt(set_wgt)
     ,.set_reg(set_reg)
     ,.end_conv(end_conv)
     ,.re_buffer(re_buffer)
@@ -73,8 +71,8 @@ module TOP #(
   genvar arr_i;
   genvar arr_j;
   generate
-    for (arr_i = 0; arr_i < KERNEL_SIZE; arr_i = arr_i + 1)
-      for (arr_j = 0; arr_j < KERNEL_SIZE; arr_j = arr_j + 1)
+    for (arr_j = 0; arr_j < KERNEL_SIZE; arr_j = arr_j + 1)
+      for (arr_i = 0; arr_i < KERNEL_SIZE; arr_i = arr_i + 1)
       begin
 	      PE #(.PSUM_WIDTH(DATA_WIDTH), .WEIGHT_WIDTH(WEIGHT_WIDTH), .DATA_OUT_WIDTH(DATA_WIDTH), .IFM_WIDTH(IFM_WIDTH)) pe (
 	      		.clk(clk1)
@@ -122,7 +120,7 @@ module TOP #(
 		,.data_out_fifo(data_output)
 		);
   
-  BUFFER #(.DATA_WIDTH(DATA_WIDTH), .KERNEL_SIZE(KERNEL_SIZE), .DEPTH_H(IFM_SIZE-KERNEL_SIZE+1), .DEPTH_W(IFM_SIZE-KERNEL_SIZE+1), .CO(CO)) buffer_psum(
+  BUFFER #(.DATA_WIDTH(DATA_WIDTH), .IFM_SIZE(IFM_SIZE), .KERNEL_SIZE(KERNEL_SIZE), .STRIDE(STRIDE), .PAD(PAD), .CO(CO)) buffer_psum(
      .clk(clk1)
     ,.addr_x(addr_x)
     ,.addr_y(addr_y)
@@ -140,8 +138,8 @@ module TOP #(
 	    WEIGHT_BUFF #(.DATA_WIDTH(WEIGHT_WIDTH)) wgt_buf (
           .clk(clk1)
          ,.rst_n(rst_n)
-         ,.set_wgt(set_wgt)
-         ,.wgt_in(weight[wgt_i])
+         ,.set_wgt(set_wgt[wgt_i])
+         ,.wgt_in(wgt)
          ,.wgt_out(wgt_wire[wgt_i])
 	    	 );
     end
