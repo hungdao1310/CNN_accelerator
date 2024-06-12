@@ -127,8 +127,8 @@ module CONV #(
     ,.addr_y(addr_y)
     ,.d_in(data_output_temp)
     ,.d_out(psum_buffer)
-    ,.we(rd_en[KERNEL_SIZE-1])
-    ,.re(re_buffer)
+    ,.we((CI == 1) ? 1'b0 : rd_en[KERNEL_SIZE-1])
+    ,.re((CI == 1) ? 1'b0 : re_buffer)
   );
 
   genvar wgt_i;

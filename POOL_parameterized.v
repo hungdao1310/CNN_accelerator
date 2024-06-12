@@ -29,17 +29,31 @@ module POOL #(
   wire wr_clr;
   wire set_ifm;
   wire set_reg;
+  wire full;
+  wire ifm_read;
+  wire [DATA_WIDTH-1:0] ifm_pool;
   wire [KERNEL_POOL-1:0] wr_en;
   wire [KERNEL_POOL-1:0] rd_en;
+
+  POOL_BUFFER  #(.DATA_WIDTH(DATA_WIDTH), .FIFO_SIZE(IFM_SIZE), .ADD_WIDTH($clog2(IFM_SIZE)+1)) pool_buffer (
+     .clk(clk2)
+    ,.rst_n(rst_n)
+    ,.wr_en(in_valid)
+    ,.rd_en(ifm_read)
+    ,.data_in_fifo(ifm)
+    ,.data_out_fifo(ifm_pool)
+    ,.full(full)
+  );
 
   POOL_CONTROL #(.KERNEL_POOL(KERNEL_POOL), .IFM_SIZE(IFM_SIZE), .STRIDE_POOL(STRIDE_POOL), .CI(CI)) control (
      .clk1(clk1)
     ,.clk2(clk2)
     ,.rst_n(rst_n)
-    ,.in_valid(in_valid)
+    ,.full(full)
     ,.rd_clr(rd_clr)
     ,.wr_clr(wr_clr)
     ,.out_valid(out_valid)
+    ,.ifm_read(ifm_read)
     ,.set_ifm(set_ifm)
     ,.set_reg(set_reg)
     ,.end_pool(end_pool)
@@ -85,7 +99,7 @@ module POOL #(
   endgenerate
 
   // Fifo end
-  FIFO_ASYNCH #(.DATA_WIDTH(DATA_WIDTH), .FIFO_SIZE(FIFO_SIZE), .ADD_WIDTH(ADD_WIDTH)) fifo(
+  FIFO_ASYNCH #(.DATA_WIDTH(DATA_WIDTH), .FIFO_SIZE(FIFO_SIZE), .ADD_WIDTH(ADD_WIDTH)) fifo_end(
 		 .clk1  (clk1)
 		,.clk2  (clk2)
 		,.rd_clr(rd_clr)
@@ -98,16 +112,16 @@ module POOL #(
 		,.data_out_fifo(data_output)
 		);
 
-  always @(posedge clk2)
-  begin
-    ifm_temp <= ifm;
-  end
+  //always @(posedge clk2)
+  //begin
+  //  ifm_temp <= ifm_pool;
+  //end
 
   IFM_BUFF #(.DATA_WIDTH(DATA_WIDTH)) ifm_buf (
        .clk(clk1)
       ,.rst_n(rst_n)
       ,.set_ifm(set_ifm)
-      ,.ifm_in(ifm_temp)
+      ,.ifm_in(ifm_pool)
       ,.ifm_out(ifm_wire)
 			);
 

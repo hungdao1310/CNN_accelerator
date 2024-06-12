@@ -28,6 +28,8 @@ module CONTROL #(parameter KERNEL_SIZE = 4, IFM_SIZE = 9, PAD = 2, STRIDE = 2, C
   reg [2:0] curr_state;
   reg [2:0] next_state;
 
+  reg end_reg;
+
   parameter [2:0] 
     IDLE        = 3'b000,
     COMPUTE     = 3'b001,
@@ -112,7 +114,7 @@ module CONTROL #(parameter KERNEL_SIZE = 4, IFM_SIZE = 9, PAD = 2, STRIDE = 2, C
       cnt_filter  <= 0;
       set_reg     <= 0;
       set_wgt     <= 0;
-      end_conv    <= 0;
+      end_reg     <= 0;
       rd_clr      <= 0;
       wr_clr      <= 0;
       set_ifm     <= 0;
@@ -128,10 +130,10 @@ module CONTROL #(parameter KERNEL_SIZE = 4, IFM_SIZE = 9, PAD = 2, STRIDE = 2, C
           cnt_filter  <= 0;
           set_reg     <= 0;
           set_wgt     <= 0;
-          end_conv    <= 0;
           rd_clr      <= 0;
           wr_clr      <= 0;
           set_ifm     <= 0;
+          end_reg     <= (cnt_index == IFM_SIZE-KERNEL_SIZE+3) ? 1 : 0;
         end
         COMPUTE:
         begin
@@ -177,7 +179,6 @@ module CONTROL #(parameter KERNEL_SIZE = 4, IFM_SIZE = 9, PAD = 2, STRIDE = 2, C
           set_wgt     <= 0;
           set_ifm     <= 0;
           rd_clr      <= 0;
-          end_conv    <= (cnt_index == IFM_SIZE-KERNEL_SIZE+2) ? 1 : 0;
         end
         default:
         begin
@@ -188,7 +189,7 @@ module CONTROL #(parameter KERNEL_SIZE = 4, IFM_SIZE = 9, PAD = 2, STRIDE = 2, C
           set_reg     <= set_reg;
           set_ifm     <= set_ifm;
           set_wgt     <= set_wgt;
-          end_conv    <= end_conv;
+          end_reg     <= end_reg;
           wr_clr      <= wr_clr;
           rd_clr      <= rd_clr;
         end
@@ -199,12 +200,16 @@ module CONTROL #(parameter KERNEL_SIZE = 4, IFM_SIZE = 9, PAD = 2, STRIDE = 2, C
   always @(posedge clk2 or negedge rst_n)
   begin
     if (!rst_n)
+    begin
       out_valid <= 0;
+      end_conv  <= 0;
+    end
     else begin
       if (POOLING || (cnt_channel == CI && cnt_line > KERNEL_SIZE) || (cnt_channel == 1 && cnt_line == 1))
         out_valid <= rd_en[KERNEL_SIZE-1];
       else
         out_valid <= 0;
+      end_conv  <= end_reg;
     end
   end
 

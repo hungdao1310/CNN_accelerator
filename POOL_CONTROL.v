@@ -2,8 +2,9 @@ module POOL_CONTROL #(parameter KERNEL_POOL = 4, IFM_SIZE = 9, STRIDE_POOL = 2, 
   input clk1,
   input clk2,
   input rst_n,
-  input in_valid,
+  input full,
   output reg set_ifm,
+  output reg ifm_read,
   output reg rd_clr,
   output reg wr_clr,
   output reg out_valid,
@@ -19,6 +20,8 @@ module POOL_CONTROL #(parameter KERNEL_POOL = 4, IFM_SIZE = 9, STRIDE_POOL = 2, 
 
   reg [2:0] curr_state;
   reg [2:0] next_state;
+
+  reg end_reg;
 
   parameter [2:0] 
     IDLE        = 3'b000,
@@ -36,12 +39,12 @@ module POOL_CONTROL #(parameter KERNEL_POOL = 4, IFM_SIZE = 9, STRIDE_POOL = 2, 
       curr_state <= next_state;
   end
 
-  always @(in_valid or cnt_index or cnt_line or cnt_channel)
+  always @(full or cnt_index or cnt_line or cnt_channel)
   begin
     case (curr_state)
       IDLE:
       begin
-        if (in_valid)
+        if (full)
           next_state = COMPUTE;
         else
           next_state = IDLE;
@@ -64,9 +67,19 @@ module POOL_CONTROL #(parameter KERNEL_POOL = 4, IFM_SIZE = 9, STRIDE_POOL = 2, 
           next_state = COMPUTE;
       end
       END_ROW:
-        next_state = COMPUTE;
+      begin
+        if (full)
+          next_state = COMPUTE;
+        else
+          next_state = END_ROW;
+      end
       END_CHANNEL:
-        next_state = COMPUTE;
+      begin
+        if (full)
+          next_state = COMPUTE;
+        else
+          next_state = END_CHANNEL;
+      end
       END_FILTER:
         next_state = END_POOL;
       END_POOL:
@@ -97,40 +110,44 @@ module POOL_CONTROL #(parameter KERNEL_POOL = 4, IFM_SIZE = 9, STRIDE_POOL = 2, 
       cnt_line    <= 0;
       cnt_channel <= 0;
       set_reg     <= 0;
-      end_pool    <= 0;
+      end_reg     <= 0;
       rd_clr      <= 0;
       wr_clr      <= 0;
       set_ifm     <= 0;
+      ifm_read    <= 0;
     end 
     else
     begin
       case (next_state)
         IDLE:
         begin
-          cnt_index   <= (in_valid) ? 1 : 0;
+          cnt_index   <= 0;
           cnt_line    <= 0;
           cnt_channel <= 0;
-          set_reg     <= (in_valid) ? 1 : 0;
-          end_pool    <= 0;
+          set_reg     <= 0;
           rd_clr      <= 0;
           wr_clr      <= 0;
-          set_ifm     <= (in_valid) ? 1 : 0;
+          set_ifm     <= 0;
+          ifm_read    <= 0;
+          end_reg     <= (cnt_index == IFM_SIZE-KERNEL_POOL+3) ? 1 : 0;
         end
         COMPUTE:
         begin
-          cnt_index   <= (in_valid) ? cnt_index + 1 : cnt_index;
-          cnt_line    <= (in_valid && |cnt_index == 1'b0)? cnt_line + 1:cnt_line;
-          cnt_channel <= (in_valid && |cnt_index == 1'b0 && |cnt_line == 1'b0)? cnt_channel + 1:cnt_channel;
+          cnt_index   <= cnt_index + 1;
+          cnt_line    <= (|cnt_index == 1'b0)? cnt_line + 1:cnt_line;
+          cnt_channel <= (|cnt_index == 1'b0 && |cnt_line == 1'b0)? cnt_channel + 1:cnt_channel;
           set_reg     <= 1;
           rd_clr      <= 0;
           wr_clr      <= (cnt_index == KERNEL_POOL)? 1 : 0;
-          set_ifm     <= (in_valid) ? 1 : 0;
+          set_ifm     <= 1;
+          ifm_read    <= 1;
         end
         END_ROW:
         begin
           cnt_index   <= 0;
           rd_clr      <= 1;
           set_ifm     <= 0;
+          ifm_read    <= 0;
         end
         END_CHANNEL:
         begin
@@ -138,6 +155,7 @@ module POOL_CONTROL #(parameter KERNEL_POOL = 4, IFM_SIZE = 9, STRIDE_POOL = 2, 
           cnt_line    <= 0;
           rd_clr      <= 1;
           set_ifm     <= 0;
+          ifm_read    <= 0;
         end
         END_FILTER:
         begin
@@ -146,6 +164,7 @@ module POOL_CONTROL #(parameter KERNEL_POOL = 4, IFM_SIZE = 9, STRIDE_POOL = 2, 
           cnt_channel <= 0;
           rd_clr      <= 1;
           set_ifm     <= 0;
+          ifm_read    <= 0;
         end
         END_POOL:
         begin
@@ -155,7 +174,7 @@ module POOL_CONTROL #(parameter KERNEL_POOL = 4, IFM_SIZE = 9, STRIDE_POOL = 2, 
           set_reg     <= 0;
           set_ifm     <= 0;
           rd_clr      <= 0;
-          end_pool    <= (cnt_index == IFM_SIZE-KERNEL_POOL+2) ? 1 : 0;
+          ifm_read    <= 0;
         end
         default:
         begin
@@ -164,9 +183,10 @@ module POOL_CONTROL #(parameter KERNEL_POOL = 4, IFM_SIZE = 9, STRIDE_POOL = 2, 
           cnt_channel <= cnt_channel;
           set_reg     <= set_reg;
           set_ifm     <= set_ifm;
-          end_pool    <= end_pool;
+          end_reg     <= end_reg;
           wr_clr      <= wr_clr;
           rd_clr      <= rd_clr;
+          ifm_read    <= ifm_read;
         end
       endcase
     end
@@ -174,10 +194,13 @@ module POOL_CONTROL #(parameter KERNEL_POOL = 4, IFM_SIZE = 9, STRIDE_POOL = 2, 
 
   always @(posedge clk2 or negedge rst_n)
   begin
-    if (!rst_n)
+    if (!rst_n) begin
       out_valid <= 0;
+      end_pool  <= 0;
+    end
     else begin
       out_valid <= rd_en[KERNEL_POOL-1];
+      end_pool  <= end_reg;
     end
   end
 
