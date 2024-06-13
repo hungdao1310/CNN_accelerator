@@ -16,7 +16,7 @@ kk = 11
 stride = 4
 pad = 0
 relu = 1
-ic = 1
+ic = 2
 oc = 2
 
 # Max pooling 1
@@ -63,10 +63,10 @@ stride_pool_2 = 2
 in_feature_1 = 360
 out_feature_1 = 160
 
-# FC1
+# FC2
 out_feature_2 = 80
 
-# FC1
+# FC3
 out_feature_3 = 40 
 
 oh_conv = int((ih+2*pad-kk)/stride) + 1
@@ -100,19 +100,19 @@ fc_2 = nn.Linear(in_features=out_feature_1, out_features=out_feature_2, bias = F
 fc_3 = nn.Linear(in_features=out_feature_2, out_features=out_feature_3, bias = False)
 
 # randomize input feature map
-ifm = torch.rand(1, ic, ih, iw)*128-64
+ifm = torch.rand(1, ic, ih, iw)*8-4
 ifm = torch.round(ifm)
 
 # randomize weight
-weight = torch.rand(oc, ic, kk, kk)*4 - 2
+weight = torch.rand(oc, ic, kk, kk)*2 - 1
 weight = torch.round(weight)
-weight1 = torch.rand(oc_1, oc, kk_1, kk_1)*4 - 2
+weight1 = torch.rand(oc_1, oc, kk_1, kk_1)*2 - 1
 weight1 = torch.round(weight1)
-weight2 = torch.rand(oc_2, oc_1, kk_2, kk_2)*4 - 2
+weight2 = torch.rand(oc_2, oc_1, kk_2, kk_2)*2 - 1
 weight2 = torch.round(weight2)
-weight3 = torch.rand(oc_3, oc_2, kk_3, kk_3)*4 - 2
+weight3 = torch.rand(oc_3, oc_2, kk_3, kk_3)*2 - 1
 weight3 = torch.round(weight3)
-weight4 = torch.rand(oc_4, oc_3, kk_4, kk_4)*4 - 2
+weight4 = torch.rand(oc_4, oc_3, kk_4, kk_4)*2 - 1
 weight4 = torch.round(weight4)
 weight_fc1 = torch.rand(out_feature_1,in_feature_1)*2-1
 weight_fc1 = torch.round(weight_fc1)
@@ -147,8 +147,13 @@ ofm = nn.ReLU()(ofm)
 ofm = nn.MaxPool2d(kk_pool_2, stride = stride_pool_2)(ofm)
 ofm = torch.flatten(ofm, 1)
 ofm = fc_1(ofm)
+ofm = nn.ReLU()(ofm)
+ofm_fc1 = ofm
 ofm = fc_2(ofm)
+ofm = nn.ReLU()(ofm)
+ofm_fc2 = ofm
 ofm = fc_3(ofm)
+ofm = nn.ReLU()(ofm)
 ofm = torch.round(ofm)
 
 ifm_np = ifm.data.numpy().astype(int)
@@ -161,6 +166,8 @@ weight_fc1_np = weight_fc1.data.numpy().astype(int)
 weight_fc2_np = weight_fc2.data.numpy().astype(int)
 weight_fc3_np = weight_fc3.data.numpy().astype(int)
 ofm_np = ofm.data.numpy().astype(int)
+ofm_fc1_np = ofm_fc1.data.numpy().astype(int)
+ofm_fc2_np = ofm_fc2.data.numpy().astype(int)
 
 # Reshape the ifm to a 3D array
 ifm_3d = ifm_np.reshape(ic, ih, iw)
@@ -278,6 +285,8 @@ with open("weight_fc3.txt", "w") as file:
         file.write(f"\n")
 
 # Reshape the ifm to a 3D array
+ofm_fc1_3d = ofm_fc1_np.reshape(out_feature_1)
+ofm_fc2_3d = ofm_fc2_np.reshape(out_feature_2)
 ofm_3d = ofm_np.reshape(out_feature_3)
 
 # Create a ofm.txt file
@@ -292,3 +301,16 @@ with open("ofm_dec.txt", "w") as file:
     for i in range(out_feature_3):
         file.write(f"{ofm_3d[i]:>11} ")
         file.write("\n")
+
+# Create a ofm_fc1_dec.txt file
+with open("ofm_fc1_dec.txt", "w") as file:
+    for i in range(out_feature_1):
+        file.write(f"{ofm_fc1_3d[i]:>11} ")
+        file.write("\n")
+
+# Create a ofm_fc2_dec.txt file
+with open("ofm_fc2_dec.txt", "w") as file:
+    for i in range(out_feature_2):
+        file.write(f"{ofm_fc2_3d[i]:>11} ")
+        file.write("\n")
+

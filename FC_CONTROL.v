@@ -45,8 +45,8 @@ module FC_CONTROL # (parameter IFM_SIZE = 9162, TILING_SIZE = 8, KERNEL_SIZE = 4
 	reg [2:0] next_state   ;
 	wire wr_buffer_w;
 	reg wr_buff_ifm_o;
-	assign wr_buff_w = valid_ifm;
-  assign wr_buff_ifm = (wr_buff_ifm_o | wr_buff_w); 
+	assign wr_buff_ifm = valid_ifm;
+  //assign wr_buff_ifm = (wr_buff_ifm_o | wr_buff_w); 
 	
 
 	parameter IDLE            = 3'd0;
@@ -74,7 +74,7 @@ module FC_CONTROL # (parameter IFM_SIZE = 9162, TILING_SIZE = 8, KERNEL_SIZE = 4
 				else 
 					next_state = IDLE;
 			WRITE_IFM:
-				if(counter_ifm == IFM_SIZE)
+				if(counter_ifm == IFM_SIZE-1)
 					next_state = WAIT;
 				else 
 					next_state = WRITE_IFM;
@@ -83,9 +83,9 @@ module FC_CONTROL # (parameter IFM_SIZE = 9162, TILING_SIZE = 8, KERNEL_SIZE = 4
 			NOP: 
 				next_state = COMPUTE;
 			COMPUTE:
-				if(counter_ifm == IFM_SIZE)
+				if(counter_ifm == IFM_SIZE-1)
 					next_state = WAIT;
-				else if(counter_tiling == KERNEL_SIZE / TILING_SIZE + 1)
+				else if(counter_tiling == KERNEL_SIZE / TILING_SIZE && counter_ifm == IFM_SIZE-1)
 					next_state = END;
 				else 
 					next_state = COMPUTE;
@@ -124,12 +124,12 @@ module FC_CONTROL # (parameter IFM_SIZE = 9162, TILING_SIZE = 8, KERNEL_SIZE = 4
 						//set_output <= (counter_ifm == (IFM_SIZE - 1));
 					end
 					NOP:
-            {ifm_read, wgt_read, last_kernel,end_compute,rd_buff_ifm,set_reg,wr_ifm_clr ,rd_ifm_clr, set_output} <= 9'b000010000;
+            {ifm_read, wgt_read, last_kernel,end_compute,rd_buff_ifm,set_reg,wr_ifm_clr ,rd_ifm_clr, set_output} <= 9'b010011000;
 
 					END:
-            {ifm_read, wgt_read, last_kernel,end_compute,rd_buff_ifm,set_reg,wr_ifm_clr ,rd_ifm_clr} <= 8'b00001100;
+            {ifm_read, wgt_read, last_kernel,end_compute,rd_buff_ifm,set_reg,wr_ifm_clr ,rd_ifm_clr} <= 8'b00000100;
 					default:
-            {ifm_read, wgt_read, last_kernel,end_compute,rd_buff_ifm,set_reg,wr_ifm_clr ,rd_ifm_clr} <= 8'b00001100;
+            {ifm_read, wgt_read, last_kernel,end_compute,rd_buff_ifm,set_reg,wr_ifm_clr ,rd_ifm_clr} <= 8'b00000100;
 				endcase
 			end
 		end
@@ -194,43 +194,5 @@ module FC_CONTROL # (parameter IFM_SIZE = 9162, TILING_SIZE = 8, KERNEL_SIZE = 4
 				endcase
 			end
 		end
-						
-						
-				
-
-
-
-							
-						
-						
-						
-						
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 	endmodule

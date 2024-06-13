@@ -10,7 +10,7 @@ parameter KERNEL_SIZE = 11;
 parameter STRIDE = 4;
 parameter PAD = 0;
 parameter RELU = 1;
-parameter CI = 1;
+parameter CI = 2;
 parameter CO = 2;
 // Max pooling_1
 parameter KERNEL_POOL = 3;
@@ -94,10 +94,10 @@ parameter OUT_FEATURE_3 = 40;
   wire out_valid;
 	wire [DATA_WIDTH-1:0] data_output;
   
-	//initial begin
-	//	$dumpfile("CONV_POOL_CONV.vcd");
-	//	$dumpvars(0,tb);
-	//end
+	initial begin
+		$dumpfile("TOP.vcd");
+		$dumpvars(0,tb);
+	end
 
   TOP #(
     .DATA_WIDTH(DATA_WIDTH), 

@@ -68,7 +68,7 @@ wire end_compute;
 wire [15:0] counter_tiling;
 
 wire flag;
-assign flag = ((counter_ifm == 0) || (counter_ifm == 1));
+assign flag = ((counter_ifm == 0));
 
 wire [31:0] psum_in1;
 wire [31:0] psum_in2;
@@ -101,7 +101,7 @@ wire [DATA_WIDTH-1:0] out_mux;
 wire set_output;
 wire [2:0] current_state;
 
-always @(posedge clk1 or negedge rst_n) begin
+always @(posedge clk2 or negedge rst_n) begin
 	if(!rst_n) begin
     reg_1 <= 0;  
     reg_2 <= 0;
@@ -125,9 +125,9 @@ always @(posedge clk1 or negedge rst_n) begin
 end
 
 
-assign ofm = out_mux;
+assign ofm = (out_mux[DATA_WIDTH-1]) ? 0 : out_mux;
 WRITE_DATA #(.DATA_WIDTH(DATA_WIDTH), .TILING_SIZE(TILING_SIZE))  write_data(
-		.clk(clk1)
+		.clk(clk2)
 	 ,.rst_n(rst_n)
 	 ,.counter_tiling(counter_tiling)
 	 ,.state(current_state)
