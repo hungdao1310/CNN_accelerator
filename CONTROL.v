@@ -3,7 +3,6 @@ module CONTROL #(parameter KERNEL_SIZE = 4, IFM_SIZE = 9, PAD = 2, STRIDE = 2, C
   input clk2,
   input rst_n,
   input start_conv,
-  input in_valid,
   output wgt_read,
   output ifm_read,
   output re_buffer,
@@ -15,9 +14,7 @@ module CONTROL #(parameter KERNEL_SIZE = 4, IFM_SIZE = 9, PAD = 2, STRIDE = 2, C
   output reg end_conv,
   output reg [KERNEL_SIZE-1:0] rd_en,
   output reg [KERNEL_SIZE-1:0] wr_en,
-  output reg [KERNEL_SIZE*KERNEL_SIZE-1:0] set_wgt,
-  output [$clog2(IFM_SIZE-KERNEL_SIZE+1)+1:0] addr_x,
-  output [$clog2(IFM_SIZE-KERNEL_SIZE+1)+1:0] addr_y
+  output reg [KERNEL_SIZE*KERNEL_SIZE-1:0] set_wgt
 );
 
   reg [8:0] cnt_index;
@@ -217,6 +214,4 @@ module CONTROL #(parameter KERNEL_SIZE = 4, IFM_SIZE = 9, PAD = 2, STRIDE = 2, C
   assign ifm_read = ((cnt_line > PAD && cnt_line <= IFM_SIZE-PAD) && (cnt_index > PAD && cnt_index <= IFM_SIZE-PAD)) ? 1 : 0;
   assign wgt_read = (|set_wgt) ? 1 : 0;
 
-  assign addr_x = (cnt_index >= 2) ? cnt_index - 2 : cnt_index + IFM_SIZE - 1;
-  assign addr_y = (cnt_line >= KERNEL_SIZE) ? cnt_line - KERNEL_SIZE : cnt_line + IFM_SIZE - KERNEL_SIZE;
 endmodule

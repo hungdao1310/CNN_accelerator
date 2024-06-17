@@ -88,6 +88,7 @@ parameter OUT_FEATURE_3 = 40;
   wire wgt_read_fc_3;
   wire end_pool;
   wire end_pool_1;
+  wire end_pool_2;
   wire end_conv_2;
   wire end_conv_3;
   wire end_op;
@@ -178,6 +179,7 @@ parameter OUT_FEATURE_3 = 40;
     ,.wgt_read_fc_3(wgt_read_fc_3)
     ,.end_pool(end_pool)
     ,.end_pool_1(end_pool_1)
+    ,.end_pool_2(end_pool_2)
     ,.end_conv_2(end_conv_2)
     ,.end_conv_3(end_conv_3)
     ,.end_op(end_op)
@@ -494,52 +496,6 @@ parameter OUT_FEATURE_3 = 40;
     end
   endtask
 
-  //task read_output;
-  //  input [DATA_WIDTH-1:0] data_output;
-  //  input out_valid;
-  //  input end_op;
-  //  reg signed [DATA_WIDTH-1:0] ofm [0:CO_4-1][0:OFM-1][0:OFM-1];
-  //  integer toc;
-  //  integer toh;
-  //  integer tow;
-
-  //  begin
-  //    if (oc < CO_4)
-  //    begin
-  //      if (out_valid)
-  //      begin
-  //        ofm[oc][oh][ow] = data_output;
-  //        ow = ow + 1;
-  //        if (ow == OFM)
-  //        begin
-  //          ow = 0;
-  //          oh = oh + 1;
-  //          if (oh == OFM)
-  //          begin
-  //            oh = 0;
-  //            oc = oc + 1;
-  //          end
-  //        end
-  //      end
-  //    end
-  //    if (end_op)
-  //    begin
-  //      for (toc = 0; toc < CO_4; toc = toc + 1)
-  //      begin
-  //        for (toh = 0; toh < OFM; toh = toh + 1)
-  //        begin
-  //          for (tow = 0; tow < OFM; tow = tow + 1)
-  //            $fwrite(ofm_rtl, "%d ", ofm[toc][toh][tow]);
-  //          $fwrite(ofm_rtl, "\n");
-  //        end
-  //        $fwrite(ofm_rtl, "\n");
-  //      end
-  //      $display("Finish writing results to ofm_rtl.txt");
-  //      $fclose(ofm_rtl);
-  //      #10 $finish;
-  //    end
-  //  end
-  //endtask
 
   initial begin
     ow = 0;
@@ -562,21 +518,21 @@ parameter OUT_FEATURE_3 = 40;
 #7  start_conv = 1;
 #10 start_conv = 0;
     time_start = $time;
-    //wait (end_op == 1);
-    //$display("Computing time = %t", $time-time_start);
   end
 
-  //initial begin
-  //  wait (start_conv == 1);
-  //  $display("Computing layer 1");
-  //  wait (end_pool == 1);
-  //  $display("Computing layer 2");
-  //  wait (end_pool_1 == 1);
-  //  $display("Computing layer 3");
-  //  wait (end_conv_2 == 1);
-  //  $display("Computing layer 4");
-  //  wait (end_conv_3 == 1);
-  //  $display("Computing layer 5");
-  //end
+  initial begin
+    wait (start_conv == 1);
+    $display("Computing layer 1");
+    wait (end_pool == 1);
+    $display("Computing layer 2");
+    wait (end_pool_1 == 1);
+    $display("Computing layer 3");
+    wait (end_conv_2 == 1);
+    $display("Computing layer 4");
+    wait (end_conv_3 == 1);
+    $display("Computing layer 5");
+    wait (end_pool_2 == 1);
+    $display("Computing FC");
+  end
 
 endmodule

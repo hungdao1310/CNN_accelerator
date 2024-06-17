@@ -112,11 +112,6 @@ module POOL #(
 		,.data_out_fifo(data_output)
 		);
 
-  //always @(posedge clk2)
-  //begin
-  //  ifm_temp <= ifm_pool;
-  //end
-
   IFM_BUFF #(.DATA_WIDTH(DATA_WIDTH)) ifm_buf (
        .clk(clk1)
       ,.rst_n(rst_n)

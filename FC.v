@@ -185,9 +185,6 @@ FIFO_ASYNCH #(.DATA_WIDTH(DATA_WIDTH), .FIFO_SIZE(IFM_SIZE), .ADD_WIDTH(ADD_WIDT
   .data_out_fifo(ifm_out)
 	);
 
-// sinal controll write for FIFO
-//assign wr_en = ifm_valid;
-
 PE #(.PSUM_WIDTH(DATA_WIDTH), .WEIGHT_WIDTH(WGT_WIDTH), .IFM_WIDTH(DATA_WIDTH), .POOLING(0) ) pe1(
       .clk(clk1)
      ,.rst_n(rst_n)

@@ -78,6 +78,7 @@ module TOP #(
   output wgt_read_fc_3,
   output end_pool,
   output end_pool_1,
+  output end_pool_2,
   output end_conv_2,
   output end_conv_3,
   output end_op,

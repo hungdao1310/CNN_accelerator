@@ -16,7 +16,6 @@ module CONV #(
 	input clk2,
 	input rst_n,
   input start_conv,
-  input in_valid,
 	input [IFM_WIDTH-1:0] ifm,
 	input [WEIGHT_WIDTH-1:0] wgt,
   output ifm_read,
@@ -43,8 +42,6 @@ module CONV #(
   wire [DATA_WIDTH-1:0] psum_buffer;
   wire [KERNEL_SIZE-1:0] wr_en;
   wire [KERNEL_SIZE-1:0] rd_en;
-  wire [ADD_WIDTH:0] addr_x;
-  wire [ADD_WIDTH:0] addr_y;
   wire [DATA_WIDTH-1:0] data_output_temp;
 
   CONTROL #(.KERNEL_SIZE(KERNEL_SIZE), .IFM_SIZE(IFM_SIZE+2*PAD), .PAD(PAD), .STRIDE(STRIDE), .CI(CI), .CO(CO)) control (
@@ -52,7 +49,6 @@ module CONV #(
     ,.clk2(clk2)
     ,.rst_n(rst_n)
     ,.start_conv(start_conv)
-    ,.in_valid(in_valid)
     ,.ifm_read(ifm_read)
     ,.wgt_read(wgt_read)
     ,.rd_clr(rd_clr)
@@ -65,8 +61,6 @@ module CONV #(
     ,.re_buffer(re_buffer)
     ,.rd_en(rd_en)
     ,.wr_en(wr_en)
-    ,.addr_x(addr_x)
-    ,.addr_y(addr_y)
   );
 
   genvar arr_i;
@@ -123,8 +117,7 @@ module CONV #(
   
   BUFFER #(.DATA_WIDTH(DATA_WIDTH), .IFM_SIZE(IFM_SIZE), .KERNEL_SIZE(KERNEL_SIZE), .STRIDE(STRIDE), .PAD(PAD)) buffer_psum(
      .clk(clk1)
-    ,.addr_x(addr_x)
-    ,.addr_y(addr_y)
+    ,.rst_n(rst_n)
     ,.d_in(data_output_temp)
     ,.d_out(psum_buffer)
     ,.we((CI == 1) ? 1'b0 : rd_en[KERNEL_SIZE-1])
